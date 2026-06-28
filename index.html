@@ -1,0 +1,1511 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Excel + Chat Update Tool</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --soft: #f8fafc;
+      --text: #172033;
+      --muted: #667085;
+      --line: #d9e2ef;
+      --primary: #2357d8;
+      --primary-soft: #e8efff;
+      --ok: #16834a;
+      --ok-soft: #e8f7ef;
+      --warn: #a16207;
+      --warn-soft: #fff7df;
+      --bad: #c62828;
+      --bad-soft: #fdecec;
+      --shadow: 0 18px 45px rgba(19, 37, 68, 0.08);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #e9f0ff 0, transparent 32%), var(--bg);
+      color: var(--text);
+    }
+
+    .app {
+      width: min(1450px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 28px 0 50px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 42px);
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+    }
+
+    .lead {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 15px;
+      max-width: 900px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 13px;
+      border-radius: 999px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+      box-shadow: 0 8px 20px rgba(19, 37, 68, 0.05);
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--warn);
+      box-shadow: 0 0 0 4px var(--warn-soft);
+    }
+
+    .dot.ok {
+      background: var(--ok);
+      box-shadow: 0 0 0 4px var(--ok-soft);
+    }
+
+    .dot.bad {
+      background: var(--bad);
+      box-shadow: 0 0 0 4px var(--bad-soft);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 390px minmax(0, 1fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(217, 226, 239, 0.86);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      min-width: 0;
+    }
+
+    .panel-header {
+      padding: 22px 22px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .panel-header p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 13px;
+    }
+
+    .panel-body {
+      padding: 22px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .upload-box {
+      border: 1.5px dashed #a8b8d4;
+      border-radius: 18px;
+      background: var(--soft);
+      padding: 20px;
+      text-align: center;
+      transition: 0.2s ease;
+    }
+
+    .upload-box.loaded {
+      border-color: var(--ok);
+      background: var(--ok-soft);
+    }
+
+    .upload-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 10px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 22px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .button {
+      appearance: none;
+      border: none;
+      border-radius: 13px;
+      padding: 11px 15px;
+      background: var(--primary);
+      color: white;
+      cursor: pointer;
+      font-weight: 850;
+      font-size: 14px;
+      box-shadow: 0 10px 22px rgba(35, 87, 216, 0.25);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .button.secondary {
+      width: 100%;
+      background: #0f172a;
+      box-shadow: none;
+    }
+
+    .button.success {
+      width: 100%;
+      background: var(--ok);
+      box-shadow: 0 10px 22px rgba(22, 131, 74, 0.18);
+    }
+
+    .button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .small-note {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .summary-list {
+      display: grid;
+      gap: 11px;
+      margin-top: 16px;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 13px 14px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      border-radius: 15px;
+    }
+
+    .summary-row span:first-child {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .summary-row strong {
+      font-size: 13px;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .workspace {
+      display: grid;
+      gap: 22px;
+      min-width: 0;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .metric-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 28px rgba(19, 37, 68, 0.06);
+    }
+
+    .metric-card .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 850;
+    }
+
+    .metric-card .value {
+      display: block;
+      margin-top: 10px;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+    }
+
+    .metric-card .hint {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .field label,
+    .checkbox-card span {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 850;
+    }
+
+    .field select,
+    .field input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: white;
+      padding: 11px 12px;
+      font: inherit;
+      color: var(--text);
+      outline: none;
+    }
+
+    .checkbox-row {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .checkbox-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--soft);
+      padding: 13px;
+    }
+
+    .checkbox-card label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: white;
+      max-height: 520px;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+      font-size: 12px;
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      white-space: nowrap;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--soft);
+      color: #344054;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 850;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    td:first-child,
+    th:first-child {
+      position: sticky;
+      left: 0;
+      background: inherit;
+      z-index: 2;
+      font-weight: 850;
+    }
+
+    th:first-child {
+      background: var(--soft);
+      z-index: 3;
+    }
+
+    .placeholder {
+      min-height: 220px;
+      border: 1px dashed #b5c4db;
+      border-radius: 20px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      background: var(--soft);
+      text-align: center;
+      padding: 24px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .badge.ok {
+      color: var(--ok);
+      background: var(--ok-soft);
+    }
+
+    .badge.warn {
+      color: var(--warn);
+      background: var(--warn-soft);
+    }
+
+    .badge.bad {
+      color: var(--bad);
+      background: var(--bad-soft);
+    }
+
+    .log-box {
+      max-height: 190px;
+      overflow: auto;
+      padding: 14px;
+      border-radius: 16px;
+      background: #0f172a;
+      color: #dbeafe;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .log-line {
+      margin: 0 0 6px;
+    }
+
+    .callout {
+      border-radius: 18px;
+      padding: 16px;
+      background: #101828;
+      color: white;
+      margin-top: 16px;
+    }
+
+    .callout h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+
+    .callout p {
+      margin: 0;
+      color: #cbd5e1;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 1200px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .cards,
+      .settings-grid,
+      .checkbox-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app {
+        width: min(100% - 24px, 1450px);
+        padding-top: 18px;
+      }
+
+      .topbar {
+        flex-direction: column;
+      }
+
+      .cards,
+      .settings-grid,
+      .checkbox-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>Excel + Chat Update Tool</h1>
+        <p class="lead">
+          Upload the original Huawei metadata Excel sheet and the WhatsApp chat text file.
+          The tool extracts site audit updates and writes them into the red Post columns only.
+        </p>
+      </div>
+
+      <div class="status-pill">
+        <span id="statusDot" class="dot"></span>
+        <span id="statusText">Waiting for files</span>
+      </div>
+    </header>
+
+    <section class="layout">
+      <aside class="panel">
+        <div class="panel-header">
+          <h2>1. Upload files</h2>
+          <p>Upload the original Excel file and the recent chat text file.</p>
+        </div>
+
+        <div class="panel-body stack">
+          <div id="excelBox" class="upload-box">
+            <div class="upload-icon">📘</div>
+            <h3>Original Excel</h3>
+            <p class="small-note">Supported: .xlsx, .xlsm, .xlsb, .xls</p>
+            <br />
+            <label class="button" for="excelInput">Choose Excel</label>
+            <input id="excelInput" type="file" accept=".xlsx,.xlsm,.xlsb,.xls" />
+            <p id="excelName" class="small-note">No Excel file loaded</p>
+          </div>
+
+          <div id="chatBox" class="upload-box">
+            <div class="upload-icon">💬</div>
+            <h3>Chat text</h3>
+            <p class="small-note">Supported: .txt exported from WhatsApp/chat.</p>
+            <br />
+            <label class="button" for="chatInput">Choose Chat TXT</label>
+            <input id="chatInput" type="file" accept=".txt" />
+            <p id="chatName" class="small-note">No chat file loaded</p>
+          </div>
+
+          <button id="parseButton" class="button secondary" disabled>
+            Extract chat updates
+          </button>
+
+          <button id="updateButton" class="button success" disabled>
+            Update Excel + Download
+          </button>
+
+          <div class="summary-list">
+            <div class="summary-row">
+              <span>Excel sheet</span>
+              <strong id="sheetStatus">—</strong>
+            </div>
+            <div class="summary-row">
+              <span>Chat status</span>
+              <strong id="chatStatus">Waiting</strong>
+            </div>
+            <div class="summary-row">
+              <span>Update status</span>
+              <strong id="updateStatus">Not updated</strong>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <div class="cards">
+          <article class="metric-card">
+            <div class="label">Audit sites found</div>
+            <div id="sitesFoundMetric" class="value">—</div>
+            <div class="hint">Unique Site IDs extracted from the chat text.</div>
+          </article>
+
+          <article class="metric-card">
+            <div class="label">Rows scanned</div>
+            <div id="rowsScannedMetric" class="value">—</div>
+            <div class="hint">Rows scanned in the selected Excel sheet.</div>
+          </article>
+
+          <article class="metric-card">
+            <div class="label">Matched rows</div>
+            <div id="matchedRowsMetric" class="value">—</div>
+            <div class="hint">Excel rows whose Site ID exists in the chat update.</div>
+          </article>
+
+          <article class="metric-card">
+            <div class="label">Cells updated</div>
+            <div id="cellsUpdatedMetric" class="value">—</div>
+            <div class="hint">Cells written into the Post columns.</div>
+          </article>
+        </div>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>2. Update settings</h2>
+            <p>Select the sheet, header row, and which Post columns should be updated.</p>
+          </div>
+
+          <div class="panel-body">
+            <div class="settings-grid">
+              <div class="field">
+                <label for="sheetSelect">Sheet</label>
+                <select id="sheetSelect" disabled></select>
+              </div>
+
+              <div class="field">
+                <label for="headerRowInput">Header row</label>
+                <input id="headerRowInput" type="number" min="1" value="1" />
+              </div>
+
+              <div class="field">
+                <label for="blankModeSelect">Blank values</label>
+                <select id="blankModeSelect">
+                  <option value="SKIP">Skip blanks / NIL</option>
+                  <option value="WRITE">Write blanks</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="filenameInput">Output filename</label>
+                <input id="filenameInput" value="updated_meta_database.xlsx" />
+              </div>
+
+              <div class="field">
+                <label>Action</label>
+                <button class="button secondary" onclick="extractChatUpdates()">Extract again</button>
+              </div>
+            </div>
+
+            <div class="checkbox-row">
+              <div class="checkbox-card">
+                <span>Coordinate</span>
+                <label><input id="updateLat" type="checkbox" checked /> Post Latitude</label>
+              </div>
+
+              <div class="checkbox-card">
+                <span>Coordinate</span>
+                <label><input id="updateLon" type="checkbox" checked /> Post Longitude</label>
+              </div>
+
+              <div class="checkbox-card">
+                <span>RF value</span>
+                <label><input id="updateAz" type="checkbox" checked /> Post Azimuth</label>
+              </div>
+
+              <div class="checkbox-card">
+                <span>RF value</span>
+                <label><input id="updateAh" type="checkbox" checked /> Post Antenna Height</label>
+              </div>
+
+              <div class="checkbox-card">
+                <span>RF value</span>
+                <label><input id="updateMt" type="checkbox" checked /> Post MT</label>
+              </div>
+            </div>
+
+            <div class="callout">
+              <h3>How matching works</h3>
+              <p>
+                The tool matches chat Site ID to Excel Site ID. Latitude and Longitude are written to all matching rows.
+                Azimuth, Antenna Height, and MT are chosen by Technology and Sector ID.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>3. Extracted chat preview</h2>
+            <p>Review this before updating the Excel file.</p>
+          </div>
+
+          <div class="panel-body">
+            <div id="previewTable" class="placeholder">
+              Upload the chat file and click Extract chat updates.
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>4. Update summary</h2>
+            <p>After update, this shows which sites matched and what was written.</p>
+          </div>
+
+          <div class="panel-body">
+            <div id="updateSummaryTable" class="placeholder">
+              No update has been run yet.
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Activity log</h2>
+            <p>Shows file loading, extraction, and update steps.</p>
+          </div>
+
+          <div class="panel-body">
+            <div id="logBox" class="log-box">
+              <p class="log-line">Tool initialized. Waiting for files.</p>
+            </div>
+          </div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      workbook: null,
+      workbookFileName: "",
+      chatText: "",
+      chatFileName: "",
+      auditSites: new Map(),
+      lastSummary: []
+    };
+
+    const els = {
+      statusDot: document.getElementById("statusDot"),
+      statusText: document.getElementById("statusText"),
+
+      excelInput: document.getElementById("excelInput"),
+      chatInput: document.getElementById("chatInput"),
+
+      excelBox: document.getElementById("excelBox"),
+      chatBox: document.getElementById("chatBox"),
+
+      excelName: document.getElementById("excelName"),
+      chatName: document.getElementById("chatName"),
+
+      parseButton: document.getElementById("parseButton"),
+      updateButton: document.getElementById("updateButton"),
+
+      sheetSelect: document.getElementById("sheetSelect"),
+      headerRowInput: document.getElementById("headerRowInput"),
+      blankModeSelect: document.getElementById("blankModeSelect"),
+      filenameInput: document.getElementById("filenameInput"),
+
+      updateLat: document.getElementById("updateLat"),
+      updateLon: document.getElementById("updateLon"),
+      updateAz: document.getElementById("updateAz"),
+      updateAh: document.getElementById("updateAh"),
+      updateMt: document.getElementById("updateMt"),
+
+      sheetStatus: document.getElementById("sheetStatus"),
+      chatStatus: document.getElementById("chatStatus"),
+      updateStatus: document.getElementById("updateStatus"),
+
+      sitesFoundMetric: document.getElementById("sitesFoundMetric"),
+      rowsScannedMetric: document.getElementById("rowsScannedMetric"),
+      matchedRowsMetric: document.getElementById("matchedRowsMetric"),
+      cellsUpdatedMetric: document.getElementById("cellsUpdatedMetric"),
+
+      previewTable: document.getElementById("previewTable"),
+      updateSummaryTable: document.getElementById("updateSummaryTable"),
+      logBox: document.getElementById("logBox")
+    };
+
+    function setStatus(text, mode = "neutral") {
+      els.statusText.textContent = text;
+      els.statusDot.classList.remove("ok", "bad");
+      if (mode === "ok") els.statusDot.classList.add("ok");
+      if (mode === "bad") els.statusDot.classList.add("bad");
+    }
+
+    function log(message) {
+      const line = document.createElement("p");
+      line.className = "log-line";
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      els.logBox.appendChild(line);
+      els.logBox.scrollTop = els.logBox.scrollHeight;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function cleanText(value) {
+      return String(value ?? "").trim();
+    }
+
+    function loose(value) {
+      return cleanText(value)
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+    }
+
+    function normalizeSiteId(value) {
+      return cleanText(value)
+        .replace(/\*/g, "")
+        .replace(/[^A-Za-z0-9]/g, "")
+        .toUpperCase();
+    }
+
+    function parseSmartNumber(value, options = {}) {
+      if (value === null || value === undefined) return null;
+
+      let text = String(value)
+        .replace(/[^\d,.\-]/g, "")
+        .replace(/\s+/g, "");
+
+      if (!text) return null;
+
+      if (options.coordinate) {
+        text = text.replace(/^[-]+,/, "");
+        text = text.replace(/^[-]+(?=\d)/, "");
+      }
+
+      text = text.replace(/,/g, ".");
+
+      const match = text.match(/-?\d+(?:\.\d+)?/);
+      if (!match) return null;
+
+      const num = Number(match[0]);
+      if (!Number.isFinite(num)) return null;
+
+      return options.coordinate ? Math.abs(num) : num;
+    }
+
+    function parseValueList(text, options = {}) {
+      if (!text) return [];
+
+      let clean = String(text)
+        .replace(/[()]/g, " ")
+        .replace(/\bNIL\b/gi, "")
+        .replace(/\bNA\b/gi, "")
+        .replace(/\bm\b/gi, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      clean = clean.replace(/,/g, "/");
+      const parts = clean.split(/[\/|]/).map(part => part.trim()).filter(Boolean);
+
+      const values = [];
+
+      parts.forEach(part => {
+        const num = parseSmartNumber(part, options);
+        if (num !== null) values.push(num);
+      });
+
+      if (!values.length) {
+        const matches = clean.match(/-?\d+(?:[.,]\d+)?/g) || [];
+        matches.forEach(match => {
+          const num = parseSmartNumber(match, options);
+          if (num !== null) values.push(num);
+        });
+      }
+
+      return values;
+    }
+
+    function parseSectorValues(text) {
+      if (!text) return [];
+
+      const joined = String(text)
+        .replace(/\r/g, "")
+        .replace(/\n/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      const lower = joined.toLowerCase();
+
+      if (/(^|\s)s\s*1|sector\s*1|s1/i.test(joined)) {
+        const arr = [null, null, null];
+
+        const sectorRegex = /(?:sector\s*|s\s*)?([123])(?:\s*&\s*(?:sector\s*|s\s*)?([123]))?\s*[:\-~]?\s*([0-9]+(?:[.,][0-9]+)?)/gi;
+
+        let match;
+        while ((match = sectorRegex.exec(joined)) !== null) {
+          const s1 = Number(match[1]) - 1;
+          const s2 = match[2] ? Number(match[2]) - 1 : null;
+          const value = parseSmartNumber(match[3]);
+
+          if (value !== null && s1 >= 0 && s1 <= 2) arr[s1] = value;
+          if (value !== null && s2 !== null && s2 >= 0 && s2 <= 2) arr[s2] = value;
+        }
+
+        if (arr.some(v => v !== null)) return arr;
+      }
+
+      return parseValueList(joined);
+    }
+
+    function sectionValue(section, labels) {
+      for (const label of labels) {
+        const regex = new RegExp(`${label}\\s*[:\\-~]*\\s*([^\\n]+(?:\\n\\s*(?:S\\d|Sector\\s*\\d|\\d+\\s*m?)[^\\n]*)*)`, "i");
+        const match = section.match(regex);
+        if (match) return match[1].trim();
+      }
+
+      return "";
+    }
+
+    function normalizeTech(value, band = "", cellName = "") {
+      const text = `${value || ""} ${band || ""} ${cellName || ""}`.toUpperCase();
+
+      if (text.includes("5G") || text.includes("NR")) return "5G";
+      if (text.includes("MIMO") || text.includes("MMO") || text.includes("MM")) return "MIMO";
+      if (text.includes("4G") || text.includes("LTE") || /L\d{3,4}/.test(text)) return "4G";
+      if (text.includes("3G") || text.includes("U900") || text.includes("U2100") || text.includes("2100") || text.includes("WCDMA")) return "3G";
+      if (text.includes("2G") || text.includes("G900") || text.includes("G1800") || text.includes("GSM")) return "2G";
+
+      return "";
+    }
+
+    function parseTechSections(block) {
+      const markers = [
+        { key: "2G", regex: /^\s*2G\b.*$/gim },
+        { key: "3G", regex: /^\s*3G\b.*$/gim },
+        { key: "4G", regex: /^\s*4G\b.*$/gim },
+        { key: "MIMO", regex: /^\s*(MIMO|MMO|MM)\b.*$/gim },
+        { key: "5G", regex: /^\s*5G\b.*$/gim }
+      ];
+
+      const found = [];
+
+      markers.forEach(marker => {
+        marker.regex.lastIndex = 0;
+        let match;
+        while ((match = marker.regex.exec(block)) !== null) {
+          found.push({
+            key: marker.key,
+            index: match.index
+          });
+        }
+      });
+
+      found.sort((a, b) => a.index - b.index);
+
+      const result = {};
+
+      found.forEach((item, index) => {
+        const next = found[index + 1];
+        const section = block.slice(item.index, next ? next.index : block.length);
+
+        const azText = sectionValue(section, ["Azimuth", "Azimute", "AZ"]);
+        const mtText = sectionValue(section, ["MT"]);
+        const ahText = sectionValue(section, ["Antenna\\s*Height", "Antenna\\s*Heights", "AH"]);
+
+        result[item.key] = {
+          azimuth: parseValueList(azText),
+          mt: parseValueList(mtText),
+          antennaHeight: parseSectorValues(ahText),
+          raw: section
+        };
+      });
+
+      return result;
+    }
+
+    function parseLatLon(block) {
+      const latMatch =
+        block.match(/(?:Latitude|Lat)\s*[:\-~]*\s*([-,.\d\s]+)/i) ||
+        block.match(/Coordinate\s+Lat\s*[:\-~]*\s*([-,.\d\s]+)/i);
+
+      const lonMatch =
+        block.match(/(?:Longitude|Long|Lon|Lng)\s*[:\-~]*\s*([-,.\d\s]+)/i) ||
+        block.match(/Coordinate[\s\S]{0,80}(?:Lon|Long|Lng)\s*[:\-~]*\s*([-,.\d\s]+)/i);
+
+      return {
+        latitude: latMatch ? parseSmartNumber(latMatch[1], { coordinate: true }) : null,
+        longitude: lonMatch ? parseSmartNumber(lonMatch[1], { coordinate: true }) : null
+      };
+    }
+
+    function splitChatIntoSiteBlocks(text) {
+      const cleaned = String(text || "")
+        .replace(/\u200e/g, "")
+        .replace(/\r/g, "\n");
+
+      const regex = /site\s*id[^A-Za-z0-9]{0,12}([A-Z]{1,3}\d{3,5}|T\d{3,5})/gi;
+
+      const matches = [];
+      let match;
+
+      while ((match = regex.exec(cleaned)) !== null) {
+        matches.push({
+          siteId: normalizeSiteId(match[1]),
+          index: match.index
+        });
+      }
+
+      const blocks = [];
+
+      matches.forEach((item, index) => {
+        const next = matches[index + 1];
+        const blockText = cleaned.slice(item.index, next ? next.index : cleaned.length);
+
+        blocks.push({
+          siteId: item.siteId,
+          text: blockText
+        });
+      });
+
+      return blocks;
+    }
+
+    function parseChatText(text) {
+      const blocks = splitChatIntoSiteBlocks(text);
+      const sites = new Map();
+
+      blocks.forEach(block => {
+        if (!block.siteId) return;
+
+        const coords = parseLatLon(block.text);
+        const tech = parseTechSections(block.text);
+
+        const existing = sites.get(block.siteId);
+
+        const site = existing || {
+          siteId: block.siteId,
+          latitude: null,
+          longitude: null,
+          tech: {},
+          rawBlocks: []
+        };
+
+        if (coords.latitude !== null) site.latitude = coords.latitude;
+        if (coords.longitude !== null) site.longitude = coords.longitude;
+
+        Object.entries(tech).forEach(([key, value]) => {
+          site.tech[key] = value;
+        });
+
+        site.rawBlocks.push(block.text);
+        sites.set(block.siteId, site);
+      });
+
+      return sites;
+    }
+
+    function renderPreview() {
+      const rows = Array.from(state.auditSites.values()).sort((a, b) => a.siteId.localeCompare(b.siteId));
+
+      els.sitesFoundMetric.textContent = rows.length.toLocaleString();
+      els.chatStatus.textContent = `${rows.length.toLocaleString()} site(s) extracted`;
+
+      if (!rows.length) {
+        els.previewTable.className = "placeholder";
+        els.previewTable.innerHTML = "No site audit blocks were found in the chat text.";
+        return;
+      }
+
+      els.previewTable.className = "table-wrap";
+
+      const body = rows.map(site => {
+        const techKeys = ["2G", "3G", "4G", "MIMO", "5G"].filter(key => site.tech[key]);
+
+        return `
+          <tr>
+            <td>${escapeHtml(site.siteId)}</td>
+            <td>${site.latitude ?? "—"}</td>
+            <td>${site.longitude ?? "—"}</td>
+            <td>${escapeHtml(techKeys.join(", ") || "—")}</td>
+            <td>${escapeHtml(techKeys.map(k => `${k}: ${formatList(site.tech[k].azimuth)}`).join(" | "))}</td>
+            <td>${escapeHtml(techKeys.map(k => `${k}: ${formatList(site.tech[k].antennaHeight)}`).join(" | "))}</td>
+            <td>${escapeHtml(techKeys.map(k => `${k}: ${formatList(site.tech[k].mt)}`).join(" | "))}</td>
+          </tr>
+        `;
+      }).join("");
+
+      els.previewTable.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Site ID</th>
+              <th>Latitude</th>
+              <th>Longitude</th>
+              <th>Tech found</th>
+              <th>Azimuth</th>
+              <th>Antenna height</th>
+              <th>MT</th>
+            </tr>
+          </thead>
+          <tbody>${body}</tbody>
+        </table>
+      `;
+    }
+
+    function formatList(values) {
+      if (!values || !values.length) return "—";
+      return values.map(v => v === null ? "—" : v).join("/");
+    }
+
+    function getColumnMap(headers) {
+      const normalized = headers.map(header => loose(header));
+
+      function findColumn(possibleNames) {
+        return normalized.findIndex(header => possibleNames.some(name => header === loose(name) || header.includes(loose(name))));
+      }
+
+      return {
+        siteId: findColumn(["Site ID", "SiteID"]),
+        technology: findColumn(["Technology", "Tech"]),
+        band: findColumn(["Band"]),
+        sector: findColumn(["Sector ID", "Sector"]),
+        cellName: findColumn(["Cell Name", "Cell"]),
+
+        postLatitude: findColumn(["Post Latitude"]),
+        postLongitude: findColumn(["Post Longitude"]),
+        postAzimuth: findColumn(["Post Azimuth"]),
+        postAntennaHeight: findColumn(["Post Antenna Height", "Post Antenna height", "Post Ant Height"]),
+        postMt: findColumn(["Post MT", "Post Mechanical Tilt"])
+      };
+    }
+
+    function validateColumnMap(columnMap) {
+      const required = {
+        siteId: "Site ID",
+        postLatitude: "Post Latitude",
+        postLongitude: "Post Longitude",
+        postAzimuth: "Post Azimuth",
+        postAntennaHeight: "Post Antenna Height",
+        postMt: "Post MT"
+      };
+
+      const missing = [];
+
+      Object.entries(required).forEach(([key, label]) => {
+        if (columnMap[key] < 0) missing.push(label);
+      });
+
+      return missing;
+    }
+
+    function sectorIndex(sectorValue, cellNameValue) {
+      const sectorText = cleanText(sectorValue).toUpperCase();
+      const cellText = cleanText(cellNameValue).toUpperCase();
+      const combined = `${sectorText} ${cellText}`;
+
+      let match =
+        combined.match(/S(?:ECTOR)?\s*([123])/i) ||
+        combined.match(/(?:^|\D)([123])(?:\D|$)/);
+
+      if (match) {
+        const index = Number(match[1]) - 1;
+        if (index >= 0 && index <= 2) return index;
+      }
+
+      const lastLetter = combined.match(/[ABC](?!.*[ABC])/);
+      if (lastLetter) {
+        const letter = lastLetter[0];
+        if (letter === "A") return 0;
+        if (letter === "B") return 1;
+        if (letter === "C") return 2;
+      }
+
+      return 0;
+    }
+
+    function getTechData(site, technology) {
+      if (!technology) return null;
+
+      if (site.tech[technology]) return site.tech[technology];
+
+      if (technology === "4G" && site.tech["MIMO"]) return site.tech["4G"] || site.tech["MIMO"];
+
+      return null;
+    }
+
+    function sectorValue(values, index) {
+      if (!values || !values.length) return null;
+
+      if (values[index] !== null && values[index] !== undefined) return values[index];
+
+      if (values.length === 1) return values[0];
+
+      return null;
+    }
+
+    function shouldWrite(value) {
+      if (els.blankModeSelect.value === "WRITE") return true;
+      return !(value === null || value === undefined || value === "" || Number.isNaN(value));
+    }
+
+    function setCell(ws, rowIndex, colIndex, value) {
+      const addr = XLSX.utils.encode_cell({
+        r: rowIndex,
+        c: colIndex
+      });
+
+      if (typeof value === "number" && Number.isFinite(value)) {
+        ws[addr] = {
+          t: "n",
+          v: value
+        };
+      } else {
+        ws[addr] = {
+          t: "s",
+          v: value == null ? "" : String(value)
+        };
+      }
+    }
+
+    function readCell(row, index) {
+      if (index < 0) return "";
+      return row[index] == null ? "" : row[index];
+    }
+
+    function updateWorkbook() {
+      if (!state.workbook || !state.auditSites.size) {
+        alert("Upload both files and extract chat updates first.");
+        return;
+      }
+
+      const sheetName = els.sheetSelect.value;
+      const ws = state.workbook.Sheets[sheetName];
+
+      const headerRowNumber = Math.max(1, Number(els.headerRowInput.value || 1));
+      const headerIndex = headerRowNumber - 1;
+
+      const rows = XLSX.utils.sheet_to_json(ws, {
+        header: 1,
+        defval: "",
+        raw: false
+      });
+
+      if (!rows.length || !rows[headerIndex]) {
+        alert("The selected sheet/header row could not be read.");
+        return;
+      }
+
+      const headers = rows[headerIndex];
+      const columnMap = getColumnMap(headers);
+      const missing = validateColumnMap(columnMap);
+
+      if (missing.length) {
+        alert(`Missing required columns: ${missing.join(", ")}`);
+        log(`Cannot update. Missing columns: ${missing.join(", ")}`);
+        return;
+      }
+
+      const summaryMap = new Map();
+
+      let rowsScanned = 0;
+      let matchedRows = 0;
+      let cellsUpdated = 0;
+
+      function ensureSummary(siteId) {
+        if (!summaryMap.has(siteId)) {
+          summaryMap.set(siteId, {
+            siteId,
+            matchedRows: 0,
+            updatedCells: 0,
+            latLonCells: 0,
+            azCells: 0,
+            ahCells: 0,
+            mtCells: 0,
+            missingTechRows: 0
+          });
+        }
+
+        return summaryMap.get(siteId);
+      }
+
+      for (let r = headerIndex + 1; r < rows.length; r++) {
+        const row = rows[r];
+        const siteId = normalizeSiteId(readCell(row, columnMap.siteId));
+
+        if (!siteId) continue;
+
+        rowsScanned += 1;
+
+        const site = state.auditSites.get(siteId);
+        if (!site) continue;
+
+        const summary = ensureSummary(siteId);
+        summary.matchedRows += 1;
+        matchedRows += 1;
+
+        const technology = normalizeTech(
+          readCell(row, columnMap.technology),
+          readCell(row, columnMap.band),
+          readCell(row, columnMap.cellName)
+        );
+
+        const sIndex = sectorIndex(
+          readCell(row, columnMap.sector),
+          readCell(row, columnMap.cellName)
+        );
+
+        const techData = getTechData(site, technology);
+
+        function writeIfAllowed(colIndex, value, counterName) {
+          if (colIndex < 0) return;
+          if (!shouldWrite(value)) return;
+
+          setCell(ws, r, colIndex, value);
+
+          cellsUpdated += 1;
+          summary.updatedCells += 1;
+          summary[counterName] += 1;
+        }
+
+        if (els.updateLat.checked) writeIfAllowed(columnMap.postLatitude, site.latitude, "latLonCells");
+        if (els.updateLon.checked) writeIfAllowed(columnMap.postLongitude, site.longitude, "latLonCells");
+
+        if (techData) {
+          if (els.updateAz.checked) writeIfAllowed(columnMap.postAzimuth, sectorValue(techData.azimuth, sIndex), "azCells");
+          if (els.updateAh.checked) writeIfAllowed(columnMap.postAntennaHeight, sectorValue(techData.antennaHeight, sIndex), "ahCells");
+          if (els.updateMt.checked) writeIfAllowed(columnMap.postMt, sectorValue(techData.mt, sIndex), "mtCells");
+        } else {
+          summary.missingTechRows += 1;
+        }
+      }
+
+      const summaryRows = Array.from(summaryMap.values()).sort((a, b) => a.siteId.localeCompare(b.siteId));
+
+      const unmatchedAuditSites = Array.from(state.auditSites.keys()).filter(siteId => !summaryMap.has(siteId));
+
+      unmatchedAuditSites.forEach(siteId => {
+        summaryRows.push({
+          siteId,
+          matchedRows: 0,
+          updatedCells: 0,
+          latLonCells: 0,
+          azCells: 0,
+          ahCells: 0,
+          mtCells: 0,
+          missingTechRows: 0,
+          unmatched: true
+        });
+      });
+
+      state.lastSummary = summaryRows;
+
+      els.rowsScannedMetric.textContent = rowsScanned.toLocaleString();
+      els.matchedRowsMetric.textContent = matchedRows.toLocaleString();
+      els.cellsUpdatedMetric.textContent = cellsUpdated.toLocaleString();
+      els.updateStatus.textContent = `${cellsUpdated.toLocaleString()} cells updated`;
+
+      renderUpdateSummary(summaryRows);
+      downloadWorkbook();
+
+      setStatus("Excel updated", "ok");
+      log(`Update complete: ${rowsScanned.toLocaleString()} rows scanned, ${matchedRows.toLocaleString()} matched rows, ${cellsUpdated.toLocaleString()} cells updated.`);
+    }
+
+    function renderUpdateSummary(rows) {
+      if (!rows.length) {
+        els.updateSummaryTable.className = "placeholder";
+        els.updateSummaryTable.textContent = "No matching sites were found.";
+        return;
+      }
+
+      els.updateSummaryTable.className = "table-wrap";
+
+      const body = rows.map(row => `
+        <tr>
+          <td>${escapeHtml(row.siteId)}</td>
+          <td>${row.unmatched ? '<span class="badge bad">No Excel match</span>' : '<span class="badge ok">Matched</span>'}</td>
+          <td>${row.matchedRows.toLocaleString()}</td>
+          <td>${row.updatedCells.toLocaleString()}</td>
+          <td>${row.latLonCells.toLocaleString()}</td>
+          <td>${row.azCells.toLocaleString()}</td>
+          <td>${row.ahCells.toLocaleString()}</td>
+          <td>${row.mtCells.toLocaleString()}</td>
+          <td>${row.missingTechRows.toLocaleString()}</td>
+        </tr>
+      `).join("");
+
+      els.updateSummaryTable.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Site ID</th>
+              <th>Status</th>
+              <th>Rows matched</th>
+              <th>Cells updated</th>
+              <th>Lat/Lon cells</th>
+              <th>Azimuth cells</th>
+              <th>Height cells</th>
+              <th>MT cells</th>
+              <th>Rows missing tech</th>
+            </tr>
+          </thead>
+          <tbody>${body}</tbody>
+        </table>
+      `;
+    }
+
+    function downloadWorkbook() {
+      let filename = els.filenameInput.value.trim() || "updated_meta_database.xlsx";
+
+      if (!/\.xlsx$/i.test(filename)) {
+        filename += ".xlsx";
+      }
+
+      XLSX.writeFile(state.workbook, filename, {
+        bookType: "xlsx"
+      });
+    }
+
+    function populateSheetSelect() {
+      els.sheetSelect.innerHTML = "";
+
+      state.workbook.SheetNames.forEach(name => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+
+        if (name.trim().toLowerCase() === "all tech") {
+          option.selected = true;
+        }
+
+        els.sheetSelect.appendChild(option);
+      });
+
+      els.sheetSelect.disabled = false;
+      els.sheetStatus.textContent = els.sheetSelect.value || "—";
+    }
+
+    function updateActionButtons() {
+      els.parseButton.disabled = !(state.workbook && state.chatText);
+      els.updateButton.disabled = !(state.workbook && state.auditSites.size);
+
+      if (state.workbook && state.chatText) {
+        setStatus("Ready to extract", "ok");
+      }
+    }
+
+    async function handleExcelFile(file) {
+      if (!file) return;
+
+      if (typeof XLSX === "undefined") {
+        alert("SheetJS library did not load. Check your internet connection.");
+        return;
+      }
+
+      try {
+        const buffer = await file.arrayBuffer();
+
+        state.workbook = XLSX.read(buffer, {
+          type: "array",
+          cellStyles: true,
+          cellDates: true
+        });
+
+        state.workbookFileName = file.name;
+
+        els.excelName.textContent = file.name;
+        els.excelBox.classList.add("loaded");
+
+        populateSheetSelect();
+        updateActionButtons();
+
+        log(`Loaded Excel workbook: ${file.name}`);
+      } catch (error) {
+        console.error(error);
+        setStatus("Excel load failed", "bad");
+        log(`Excel load failed: ${error.message}`);
+        alert("Could not read the Excel file.");
+      }
+    }
+
+    async function handleChatFile(file) {
+      if (!file) return;
+
+      try {
+        state.chatText = await file.text();
+        state.chatFileName = file.name;
+
+        els.chatName.textContent = file.name;
+        els.chatBox.classList.add("loaded");
+
+        updateActionButtons();
+
+        log(`Loaded chat text file: ${file.name}`);
+      } catch (error) {
+        console.error(error);
+        setStatus("Chat load failed", "bad");
+        log(`Chat load failed: ${error.message}`);
+        alert("Could not read the chat text file.");
+      }
+    }
+
+    function extractChatUpdates() {
+      if (!state.chatText) {
+        alert("Upload the chat text file first.");
+        return;
+      }
+
+      state.auditSites = parseChatText(state.chatText);
+
+      renderPreview();
+      updateActionButtons();
+
+      els.updateStatus.textContent = "Ready to update";
+
+      setStatus("Chat updates extracted", "ok");
+      log(`Extracted ${state.auditSites.size.toLocaleString()} audit site(s) from chat text.`);
+    }
+
+    els.excelInput.addEventListener("change", event => handleExcelFile(event.target.files[0]));
+    els.chatInput.addEventListener("change", event => handleChatFile(event.target.files[0]));
+    els.parseButton.addEventListener("click", extractChatUpdates);
+    els.updateButton.addEventListener("click", updateWorkbook);
+
+    els.sheetSelect.addEventListener("change", () => {
+      els.sheetStatus.textContent = els.sheetSelect.value;
+    });
+  </script>
+</body>
+</html>
